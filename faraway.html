@@ -70,6 +70,7 @@
         const Calculator = (p) => <IconBase {...p}><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></IconBase>;
         const XCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></IconBase>;
         const CheckCircle = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>;
+        const BookOpen = (p) => <IconBase {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></IconBase>;
 
 
         // --- CONFIGURATIE & DATA ---
@@ -573,6 +574,8 @@
           const [tableauScores, setTableauScores] = useState(Array(8).fill(null));
           const [sanctuaryScores, setSanctuaryScores] = useState([]); 
           const [sanctuaryTotal, setSanctuaryTotal] = useState(0);
+          
+          const [isRulesVisible, setIsRulesVisible] = useState(false);
 
           const allReferenceCards = useMemo(() => generateDeck(false), []);
           const allReferenceSanctuaries = useMemo(() => generateSanctuaries(false), []);
@@ -582,6 +585,21 @@
             const tabTotal = tableauScores.reduce((acc, val) => acc + (val ? val.score : 0), 0);
             return tabTotal + sanctuaryTotal;
           }, [tableauScores, sanctuaryTotal]);
+          
+          const exampleCard = {
+              id: 'example',
+              number: 35,
+              region: 'GEEL',
+              symbols: ['BANAAN', 'VOGEL'],
+              bottomSymbols: ['VLAM', 'VLAM'],
+              isNight: true,
+              hasTreasureMap: false,
+              scoreType: 'FIXED',
+              scoreValue: 12,
+              scoreSymbol: null,
+              scoreColors: [],
+              isSanctuary: false
+          };
           
           const startNewGame = () => {
             const newDeck = generateDeck(true); 
@@ -709,11 +727,82 @@
                     <img src="https://i.imgur.com/dVYF1KV.png" alt="Faraway Logo" className="w-10 h-10 rounded-lg shadow-sm object-cover" />
                     <div><h1 className="text-xl font-bold leading-none">Faraway Solo</h1><p className="text-xs text-slate-500">Solo Editie</p></div>
                 </div>
-                <div className="text-center"><div className="text-xs font-bold text-slate-400 uppercase">Ronde</div><div className="text-xl font-black">{gameState === 'scoring' ? 'Finish' : tableau.length + (turnPhase === 'pick_market' ? 0 : 1)} / 8</div></div>
-                <button onClick={startNewGame} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors" title="Nieuw Spel"><RefreshCw size={20} className="text-slate-600" /></button>
+                <div className="flex items-center gap-4">
+                    <div className="text-center"><div className="text-xs font-bold text-slate-400 uppercase">Ronde</div><div className="text-xl font-black">{gameState === 'scoring' ? 'Finish' : tableau.length + (turnPhase === 'pick_market' ? 0 : 1)} / 8</div></div>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsRulesVisible(!isRulesVisible)} className={`p-2 rounded-full transition-colors ${isRulesVisible ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`} title="Speluitleg"><BookOpen size={20} /></button>
+                        <button onClick={startNewGame} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors" title="Nieuw Spel"><RefreshCw size={20} className="text-slate-600" /></button>
+                    </div>
+                </div>
               </header>
 
               <main className="max-w-7xl mx-auto flex flex-col gap-4 p-4 mb-48 lg:mb-0">
+                
+                {isRulesVisible && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 mb-4">
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2 border-b pb-2"><BookOpen size={24} className="text-indigo-500"/> Speluitleg</h2>
+                        
+                        <div className="grid md:grid-cols-2 gap-6 text-sm text-slate-600">
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-2">Spelverloop (8 Rondes)</h3>
+                                <ol className="list-decimal list-inside space-y-2 mb-4">
+                                    <li><strong>Regio verkennen:</strong> Kies 1 kaart uit je hand en speel deze.</li>
+                                    <li><strong>Heiligdommen verdienen:</strong> Is het nummer van je gespeelde kaart <strong>hoger</strong> dan de kaart ervoor? Dan verdien je een heiligdom!
+                                        <ul className="list-disc list-inside pl-4 mt-1 text-xs">
+                                            <li>Voor elke <MapIcon size={14} className="inline text-emerald-600"/> in je speelgebied mag je 1 extra kaart bekijken om uit te kiezen.</li>
+                                            <li><em>Let op: In ronde 1 kun je nog geen heiligdom verdienen.</em></li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Einde spel:</strong> Na 8 rondes draaien alle kaarten om. Daarna onthul je ze één voor één, van kaart 8 terug naar kaart 1.</li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 mb-2">Regio's & Symbolen</h3>
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                    <div className="flex items-center gap-2"><Square size={16} className="text-red-500 fill-current"/> Woestijn</div>
+                                    <div className="flex items-center gap-2"><Square size={16} className="text-blue-500 fill-current"/> Rivier</div>
+                                    <div className="flex items-center gap-2"><Square size={16} className="text-yellow-500 fill-current"/> Stad</div>
+                                    <div className="flex items-center gap-2"><Square size={16} className="text-emerald-500 fill-current"/> Bos</div>
+                                    <div className="flex items-center gap-2"><Square size={16} className="text-slate-500 fill-current"/> Mystiek</div>
+                                </div>
+                                
+                                <h3 className="font-bold text-slate-800 mb-2">De Kaart Uitgelegd</h3>
+                                <div className="flex flex-col sm:flex-row items-start gap-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <div className="relative flex-shrink-0 mx-auto sm:mx-0 mt-2">
+                                        <Card data={exampleCard} disabled={true} />
+                                        {/* Markers */}
+                                        <div className="absolute -top-2 -left-2 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md border border-white z-10">1</div>
+                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md border border-white z-10">2</div>
+                                        <div className="absolute bottom-8 -right-2 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md border border-white z-10">3</div>
+                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md border border-white z-10">4</div>
+                                    </div>
+                                    <div className="space-y-2 text-xs text-slate-600 w-full">
+                                        <div className="flex gap-2">
+                                            <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">1</div>
+                                            <div><strong className="text-slate-800">Nummer & Tijd:</strong> Bepaalt de volgorde. <Moon size={10} className="inline"/> is Nacht, <Sun size={10} className="inline"/> is Dag.</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">2</div>
+                                            <div><strong className="text-slate-800">Verkenning:</strong> Deze symbolen (bijv. <Banana size={10} className="inline"/> of <Bird size={10} className="inline"/>) voeg je toe aan je voorraad zolang de kaart open ligt.</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">3</div>
+                                            <div><strong className="text-slate-800">Vereisten:</strong> Deze symbolen moet je hebben op <em>andere</em> open kaarten om de punten te krijgen.</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">4</div>
+                                            <div><strong className="text-slate-800">Punten:</strong> Je beloning als aan de vereiste (3) is voldaan.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t text-center">
+                            <button onClick={() => setIsRulesVisible(false)} className="text-indigo-600 font-bold hover:underline text-sm">Sluit Uitleg</button>
+                        </div>
+                    </div>
+                )}
+
                 <div className={`border px-4 py-3 rounded-lg flex items-center justify-between shadow-sm mx-auto w-full max-w-2xl transition-colors ${gameState === 'scoring' ? 'bg-indigo-600 text-white' : turnPhase === 'pick_market' ? 'bg-amber-50 border-amber-200 text-amber-900' : turnPhase === 'pick_sanctuary' ? 'bg-purple-50 border-purple-200 text-purple-900' : 'bg-indigo-50 border-indigo-100 text-indigo-800'}`}>
                   <div className="flex items-center gap-3">
                       {gameState === 'scoring' ? <Calculator size={20} /> : turnPhase === 'pick_market' ? <Store size={20} /> : turnPhase === 'pick_sanctuary' ? <Gem size={20} /> : <Hand size={20} />}

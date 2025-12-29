@@ -753,8 +753,50 @@
                                             <li><em>Let op: In ronde 1 kun je nog geen heiligdom verdienen.</em></li>
                                         </ul>
                                     </li>
-                                    <li><strong>Einde spel:</strong> Na 8 rondes draaien alle kaarten om. Daarna onthul je ze één voor één, van kaart 8 terug naar kaart 1.</li>
+                                    <li><strong>Nieuwe regio kaart kiezen:</strong> Vervolgens kies je een nieuwe kaart uit de markt om jouw hand mee aan te vullen.</li>
                                 </ol>
+                                <p className="mt-4 text-sm text-slate-600 mb-6"><strong className="text-slate-800">Einde spel:</strong> Na 8 rondes worden alle kaarten omgedraaid. Nu wordt 1 voor 1 gecheckt of jij de punten hebt behaald. <strong className="text-slate-800">Maar nu onthullen we de kaarten van 8 naar 1!</strong></p>
+
+                                <h3 className="font-bold text-slate-800 mb-2">Puntentelling</h3>
+                                <div className="space-y-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800"><MapIcon size={16} className="text-emerald-600"/> = 1</div>
+                                        <div>1 punt voor elke zichtbare schatkaart</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800"><Bird size={16} className="text-amber-800"/> = 4</div>
+                                        <div>4 punten voor elke zichtbare vogel</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800">
+                                            <div className="flex items-center"><Square size={12} className="text-yellow-500 fill-current"/><span className="text-xs mx-0.5">/</span><Square size={12} className="text-emerald-500 fill-current"/></div> = 2
+                                        </div>
+                                        <div>2 punten voor elke Stad en voor elk Bos kaart</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800"><Square size={16} className="text-red-500 fill-current"/> = 4</div>
+                                        <div>4 punten voor elke Woestijn</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800">
+                                            <div className="flex -space-x-1">
+                                                <Square size={12} className="text-red-500 fill-current"/>
+                                                <Square size={12} className="text-emerald-500 fill-current"/>
+                                                <Square size={12} className="text-blue-500 fill-current"/>
+                                                <Square size={12} className="text-yellow-500 fill-current"/>
+                                            </div> = 10
+                                        </div>
+                                        <div>10 punten voor <strong>elke</strong> set van 4 verschillende regio's</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800"><Moon size={16} className="text-indigo-600 fill-indigo-200"/> = 4</div>
+                                        <div>4 punten voor elke nachtkaart</div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 min-w-[80px] font-bold text-slate-800 pl-1">14</div>
+                                        <div>14 punten</div>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <h3 className="font-bold text-slate-800 mb-2">Regio's & Symbolen</h3>

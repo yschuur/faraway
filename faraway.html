@@ -13,6 +13,9 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://i.imgur.com/dVYF1KV.png">
     
+    <!-- Favicon toegevoegd -->
+    <link rel="icon" href="https://i.imgur.com/dVYF1KV.png" type="image/png">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -701,7 +704,11 @@
           return (
             <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-24 md:pb-0">
               <header className="max-w-7xl mx-auto flex justify-between items-center bg-white p-4 shadow-sm sticky top-0 z-30">
-                <div className="flex items-center gap-2"><div className="bg-indigo-600 p-2 rounded-lg text-white"><MapIcon size={24} /></div><div><h1 className="text-xl font-bold leading-none">Faraway Solo</h1><p className="text-xs text-slate-500">Solo Editie</p></div></div>
+                <div className="flex items-center gap-2">
+                    {/* Afbeelding als logo linksboven */}
+                    <img src="https://i.imgur.com/dVYF1KV.png" alt="Faraway Logo" className="w-10 h-10 rounded-lg shadow-sm object-cover" />
+                    <div><h1 className="text-xl font-bold leading-none">Faraway Solo</h1><p className="text-xs text-slate-500">Solo Editie</p></div>
+                </div>
                 <div className="text-center"><div className="text-xs font-bold text-slate-400 uppercase">Ronde</div><div className="text-xl font-black">{gameState === 'scoring' ? 'Finish' : tableau.length + (turnPhase === 'pick_market' ? 0 : 1)} / 8</div></div>
                 <button onClick={startNewGame} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors" title="Nieuw Spel"><RefreshCw size={20} className="text-slate-600" /></button>
               </header>

@@ -829,7 +829,7 @@
                                         </div>
                                         <div className="flex gap-2">
                                             <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">3</div>
-                                            <div><strong className="text-slate-800">Vereisten:</strong> Deze symbolen moet je hebben op <em>andere</em> open kaarten om de punten te krijgen.</div>
+                                            <div><strong className="text-slate-800">Vereisten:</strong> Deze symbolen moet je hebben op open kaarten om de punten te krijgen.</div>
                                         </div>
                                         <div className="flex gap-2">
                                             <div className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mt-0.5">4</div>
@@ -988,7 +988,7 @@
                                  </div>
                               </div>
                            )}
-                           <div className={`transition-all duration-300 ${turnPhase === 'play_hand' && gameState === 'playing' ? '' : 'opacity-50 pointer-events-none hidden lg:block'}`}>
+                           <div className={`transition-all duration-300 ${turnPhase === 'play_hand' && gameState === 'playing' ? '' : 'opacity-50 pointer-events-none'}`}>
                               <h2 className="text-sm font-bold mb-2 flex items-center gap-2 text-slate-500 lg:hidden"><Hand size={16} /> Je Hand</h2>
                               <div className="flex flex-nowrap lg:flex-wrap justify-center gap-2 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
                                 {hand.map((card, hIdx) => (

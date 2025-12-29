@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Faraway - Solo Editie</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel voor JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Kaart animaties */
+        @keyframes flipIn {
+            0% { transform: rotateY(90deg); opacity: 0; }
+            100% { transform: rotateY(0deg); opacity: 1; }
+        }
+        .animate-flip-in {
+            animation: flipIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONEN (Inline SVG's) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+
+        const MapIcon = (p) => <IconBase {...p}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" x2="9" y1="3" y2="18" /><line x1="15" x2="15" y1="6" y2="21" /></IconBase>;
+        const Moon = (p) => <IconBase {...p}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></IconBase>;
+        const Sun = (p) => <IconBase {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></IconBase>;
+        const Flame = (p) => <IconBase {...p}><path d="M12 2c0 0-3 2.5-3 6 0-2 2-4 2-4s-4 2-4 6c0 3.3 2.7 6 6 6s6-2.7 6-6c0-4-4-6-4-6s2 2 2 4c0-3.5-3-6-3-6z" /></IconBase>;
+        const RefreshCw = (p) => <IconBase {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></IconBase>;
+        const Info = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></IconBase>;
+        const Hand = (p) => <IconBase {...p}><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" /><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" /><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" /><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /></IconBase>;
+        const Store = (p) => <IconBase {...p}><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7" /></IconBase>;
+        const Bird = (p) => <IconBase {...p}><path d="M16 7h.01" /><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20" /><path d="m20 7 2 .5-2 .5" /><path d="M10 18v3" /><path d="M14 17.75V21" /><path d="M7 18a6 6 0 0 0 3.84-10.61" /></IconBase>;
+        const Banana = (p) => <IconBase {...p}><path d="M4 13c3.5-2 8-2 10 2a5.5 5.5 0 0 1 8 5" /><path d="M5.15 17.89c5.52-1.52 8.65-6.89 7-12C11.55 4 11.5 2 13 2c3.22 0 5 5.5 5 8 0 6.5-4.2 12-10.49 12C5.11 22 2 22 2 20c0-1.5 1.14-1.55 3.15-2.11Z" /></IconBase>;
+        const Gem = (p) => <IconBase {...p}><path d="M6 3h12l4 6-10 13L2 9Z" /><path d="M11 3 8 9l4 13 4-13-3-6" /><path d="M2 9h20" /></IconBase>;
+        const Square = (p) => <IconBase {...p}><rect width="18" height="18" x="3" y="3" rx="2" /></IconBase>;
+        const Calculator = (p) => <IconBase {...p}><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></IconBase>;
+        const XCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></IconBase>;
+        const CheckCircle = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>;
+
+
+        // --- CONFIGURATIE & DATA ---
+
+        const REGIONS = {
+          ROOD: { 
+            name: 'Woestijn', 
+            color: 'bg-red-100', 
+            border: 'border-red-600', 
+            text: 'text-red-900', 
+            iconColor: 'text-red-700',
+            imageUrl: 'https://i.imgur.com/pOY2gOG.png'
+          },
+          BLAUW: { 
+            name: 'Rivier', 
+            color: 'bg-blue-100', 
+            border: 'border-blue-600', 
+            text: 'text-blue-900', 
+            iconColor: 'text-blue-700',
+            imageUrl: 'https://i.imgur.com/QCE4PY2.png'
+          },
+          GEEL: { 
+            name: 'Stad', 
+            color: 'bg-yellow-100', 
+            border: 'border-yellow-600', 
+            text: 'text-yellow-900', 
+            iconColor: 'text-yellow-700',
+            imageUrl: 'https://i.imgur.com/6QQxUdB.png'
+          },
+          GROEN: { 
+            name: 'Bos', 
+            color: 'bg-emerald-100', 
+            border: 'border-emerald-600', 
+            text: 'text-emerald-900', 
+            iconColor: 'text-emerald-700',
+            imageUrl: 'https://i.imgur.com/cT7BEHN.png'
+          },
+          GRIJS: { 
+            name: 'Mystiek', 
+            color: 'bg-slate-200', 
+            border: 'border-slate-600', 
+            text: 'text-slate-800', 
+            iconColor: 'text-slate-600',
+            imageUrl: 'https://i.imgur.com/ApZA4Xa.png'
+          },
+        };
+
+        const SYMBOLS = {
+          BANAAN: { id: 'BANAAN', name: 'Banaan', icon: Banana, color: 'text-yellow-800' }, 
+          VLAM: { id: 'VLAM', name: 'Rode Vlam', icon: Flame, color: 'text-red-600' },
+          VOGEL: { id: 'VOGEL', name: 'Vogel', icon: Bird, color: 'text-amber-900' }, 
+          NIGHT: { id: 'NIGHT', name: 'Nacht', icon: Moon, color: 'text-indigo-800 fill-indigo-200' },
+          DAY: { id: 'DAY', name: 'Dag', icon: Sun, color: 'text-amber-600 fill-amber-100' },
+          MAP: { id: 'MAP', name: 'Schatkaart', icon: MapIcon, color: 'text-emerald-800' },
+        };
+
+        // Helper functie voor Fisher-Yates shuffle (echt random)
+        const shuffleArray = (array) => {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        };
+
+        const generateDeck = (shuffle = true) => {
+          const deck = [];
+          const regionKeys = Object.keys(REGIONS);
+          
+          for (let i = 0; i < 77; i++) {
+            const regionKey = regionKeys[i % regionKeys.length]; 
+            
+            if (i === 0) { deck.push({ id: 0, number: 0, region: 'GRIJS', symbols: ['BANAAN', 'VLAM', 'VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 1) { deck.push({ id: 1, number: 1, region: 'ROOD', symbols: ['VOGEL', 'VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 2) { deck.push({ id: 2, number: 2, region: 'BLAUW', symbols: ['VLAM', 'VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 3) { deck.push({ id: 3, number: 3, region: 'GROEN', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 4, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 4) { deck.push({ id: 4, number: 4, region: 'ROOD', symbols: ['BANAAN', 'VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 5) { deck.push({ id: 5, number: 5, region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 2, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 6) { deck.push({ id: 6, number: 6, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 7) { deck.push({ id: 7, number: 7, region: 'ROOD', symbols: ['VOGEL', 'VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 8) { deck.push({ id: 8, number: 8, region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 9) { deck.push({ id: 9, number: 9, region: 'BLAUW', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 5, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 10) { deck.push({ id: 10, number: 10, region: 'ROOD', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 11) { deck.push({ id: 11, number: 11, region: 'GROEN', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 12) { deck.push({ id: 12, number: 12, region: 'GEEL', symbols: ['BANAAN'], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 13) { deck.push({ id: 13, number: 13, region: 'BLAUW', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 14) { deck.push({ id: 14, number: 14, region: 'ROOD', symbols: ['BANAAN'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 15) { deck.push({ id: 15, number: 15, region: 'GROEN', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 16) { deck.push({ id: 16, number: 16, region: 'ROOD', symbols: ['VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 17) { deck.push({ id: 17, number: 17, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: ['VOGEL', 'VOGEL'], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 18) { deck.push({ id: 18, number: 18, region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: '4COLORS', scoreValue: 10, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 19) { deck.push({ id: 19, number: 19, region: 'ROOD', symbols: ['BANAAN'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 20) { deck.push({ id: 20, number: 20, region: 'GROEN', symbols: [], bottomSymbols: ['VLAM'], isNight: true, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 21) { deck.push({ id: 21, number: 21, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM'], isNight: true, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 8, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 22) { deck.push({ id: 22, number: 22, region: 'GROEN', symbols: [], bottomSymbols: [], isNight: true, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 23) { deck.push({ id: 23, number: 23, region: 'ROOD', symbols: ['VOGEL', 'VLAM'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '4COLORS', scoreValue: 10, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 24) { deck.push({ id: 24, number: 24, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: ['VOGEL'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 25) { deck.push({ id: 25, number: 25, region: 'GEEL', symbols: [], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GEEL', 'GROEN'], isSanctuary: false }); continue; }
+            if (i === 26) { deck.push({ id: 26, number: 26, region: 'ROOD', symbols: ['VOGEL'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 27) { deck.push({ id: 27, number: 27, region: 'GEEL', symbols: [], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GEEL', 'BLAUW'], isSanctuary: false }); continue; }
+            if (i === 28) { deck.push({ id: 28, number: 28, region: 'ROOD', symbols: ['VLAM'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 29) { deck.push({ id: 29, number: 29, region: 'GEEL', symbols: ['BANAAN'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 30) { deck.push({ id: 30, number: 30, region: 'ROOD', symbols: ['VLAM'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 31) { deck.push({ id: 31, number: 31, region: 'GEEL', symbols: [], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GEEL', 'ROOD'], isSanctuary: false }); continue; }
+            if (i === 32) { deck.push({ id: 32, number: 32, region: 'ROOD', symbols: ['VOGEL', 'VLAM'], bottomSymbols: ['VLAM', 'VLAM', 'VLAM'], isNight: true, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 7, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 33) { deck.push({ id: 33, number: 33, region: 'GEEL', symbols: [], bottomSymbols: [], isNight: true, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 34) { deck.push({ id: 34, number: 34, region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: ['VLAM', 'VLAM'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 35) { deck.push({ id: 35, number: 35, region: 'GEEL', symbols: ['VOGEL'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '4COLORS', scoreValue: 10, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 36) { deck.push({ id: 36, number: 36, region: 'ROOD', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 4, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 37) { deck.push({ id: 37, number: 37, region: 'GEEL', symbols: [], bottomSymbols: ['BANAAN'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 38) { deck.push({ id: 38, number: 38, region: 'GROEN', symbols: ['VLAM'], bottomSymbols: ['VOGEL', 'BANAAN'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 39) { deck.push({ id: 39, number: 39, region: 'ROOD', symbols: ['BANAAN', 'VLAM'], bottomSymbols: ['VOGEL', 'VOGEL'], isNight: true, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 9, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 40) { deck.push({ id: 40, number: 40, region: 'BLAUW', symbols: [], bottomSymbols: ['BANAAN', 'VOGEL', 'VLAM'], isNight: true, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 41) { deck.push({ id: 41, number: 41, region: 'GROEN', symbols: ['BANAAN'], bottomSymbols: ['VOGEL', 'VLAM', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 4, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 42) { deck.push({ id: 42, number: 42, region: 'GEEL', symbols: [], bottomSymbols: ['VLAM', 'VOGEL'], isNight: false, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 2, scoreSymbol: null, scoreColors: ['GEEL', 'GROEN'], isSanctuary: false }); continue; }
+            if (i === 43) { deck.push({ id: 43, number: 43, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: '4COLORS', scoreValue: 10, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 44) { deck.push({ id: 44, number: 44, region: 'GEEL', symbols: ['VLAM'], bottomSymbols: ['VLAM', 'BANAAN'], isNight: false, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 2, scoreSymbol: null, scoreColors: ['GEEL', 'BLAUW'], isSanctuary: false }); continue; }
+            if (i === 45) { deck.push({ id: 45, number: 45, region: 'GROEN', symbols: ['VLAM'], bottomSymbols: ['VOGEL', 'VOGEL', 'VOGEL'], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 13, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 46) { deck.push({ id: 46, number: 46, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VOGEL'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 10, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 47) { deck.push({ id: 47, number: 47, region: 'GEEL', symbols: [], bottomSymbols: ['BANAAN', 'VOGEL'], isNight: false, hasTreasureMap: false, scoreType: '2COLORS', scoreValue: 2, scoreSymbol: null, scoreColors: ['GEEL', 'ROOD'], isSanctuary: false }); continue; }
+            if (i === 48) { deck.push({ id: 48, number: 48, region: 'ROOD', symbols: ['VOGEL'], bottomSymbols: [], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 49) { deck.push({ id: 49, number: 49, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 12, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 50) { deck.push({ id: 50, number: 50, region: 'GEEL', symbols: ['VLAM'], bottomSymbols: ['BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: false, scoreType: '1COLOR', scoreValue: 4, scoreSymbol: null, scoreColors: ['GROEN'], isSanctuary: false }); continue; }
+            if (i === 51) { deck.push({ id: 51, number: 51, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: ['VLAM', 'VLAM', 'VLAM', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 14, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 52) { deck.push({ id: 52, number: 52, region: 'ROOD', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 4, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 53) { deck.push({ id: 53, number: 53, region: 'GEEL', symbols: ['VOGEL'], bottomSymbols: ['BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: false, scoreType: '1COLOR', scoreValue: 4, scoreSymbol: null, scoreColors: ['ROOD'], isSanctuary: false }); continue; }
+            if (i === 54) { deck.push({ id: 54, number: 54, region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: ['BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 4, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 55) { deck.push({ id: 55, number: 55, region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: ['VOGEL', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 56) { deck.push({ id: 56, number: 56, region: 'GEEL', symbols: ['BANAAN'], bottomSymbols: ['VOGEL', 'VOGEL', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: '1COLOR', scoreValue: 4, scoreSymbol: null, scoreColors: ['BLAUW'], isSanctuary: false }); continue; }
+            if (i === 57) { deck.push({ id: 57, number: 57, region: 'ROOD', symbols: [], bottomSymbols: ['BANAAN', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: false, scoreType: 'SYMBOL', scoreValue: 4, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 58) { deck.push({ id: 58, number: 58, region: 'GROEN', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL', 'VOGEL'], isNight: false, hasTreasureMap: true, scoreType: 'SYMBOL', scoreValue: 3, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 59) { deck.push({ id: 59, number: 59, region: 'GEEL', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL', 'VOGEL', 'VLAM'], isNight: false, hasTreasureMap: true, scoreType: '2COLORS', scoreValue: 3, scoreSymbol: null, scoreColors: ['GEEL', 'ROOD'], isSanctuary: false }); continue; }
+            if (i === 60) { deck.push({ id: 60, number: 60, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VOGEL', 'VOGEL'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 16, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 61) { deck.push({ id: 61, number: 61, region: 'GROEN', symbols: ['BANAAN'], bottomSymbols: ['VOGEL', 'VOGEL', 'VOGEL', 'VOGEL'], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 17, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 62) { deck.push({ id: 62, number: 62, region: 'GEEL', symbols: [], bottomSymbols: ['BANAAN', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: '2COLORS', scoreValue: 3, scoreSymbol: null, scoreColors: ['GEEL', 'BLAUW'], isSanctuary: false }); continue; }
+            if (i === 63) { deck.push({ id: 63, number: 63, region: 'GROEN', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 15, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 64) { deck.push({ id: 64, number: 64, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 18, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 65) { deck.push({ id: 65, number: 65, region: 'GEEL', symbols: [], bottomSymbols: ['BANAAN', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: '2COLORS', scoreValue: 3, scoreSymbol: null, scoreColors: ['GEEL', 'GROEN'], isSanctuary: false }); continue; }
+            if (i === 66) { deck.push({ id: 66, number: 66, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VLAM', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 20, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 67) { deck.push({ id: 67, number: 67, region: 'GROEN', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL', 'BANAAN', 'BANAAN'], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 19, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 68) { deck.push({ id: 68, number: 68, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VLAM', 'VLAM', 'VLAM'], isNight: false, hasTreasureMap: false, scoreType: 'FIXED', scoreValue: 24, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 69) { deck.push({ id: 69, number: 69, region: 'ROOD', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: '3SYMBOLS', scoreValue: 7, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 70) { deck.push({ id: 70, number: 70, region: 'GRIJS', symbols: [], bottomSymbols: [], isNight: false, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 6, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 71) { deck.push({ id: 71, number: 71, region: 'GROEN', symbols: ['VLAM'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '3SYMBOLS', scoreValue: 7, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 72) { deck.push({ id: 72, number: 72, region: 'GRIJS', symbols: [], bottomSymbols: ['VOGEL', 'VOGEL', 'VOGEL', 'VOGEL', 'VOGEL'], isNight: true, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 26, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 73) { deck.push({ id: 73, number: 73, region: 'GEEL', symbols: ['VOGEL'], bottomSymbols: ['BANAAN', 'BANAAN', 'BANAAN', 'BANAAN'], isNight: true, hasTreasureMap: false, scoreType: '1COLOR', scoreValue: 5, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: false }); continue; }
+            if (i === 74) { deck.push({ id: 74, number: 74, region: 'GRIJS', symbols: ['BANAAN'], bottomSymbols: [], isNight: true, hasTreasureMap: false, scoreType: '3SYMBOLS', scoreValue: 7, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 75) { deck.push({ id: 75, number: 75, region: 'BLAUW', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VLAM', 'VLAM', 'VLAM', 'VLAM'], isNight: true, hasTreasureMap: true, scoreType: 'FIXED', scoreValue: 28, scoreSymbol: null, scoreColors: [], isSanctuary: false }); continue; }
+            if (i === 76) { deck.push({ id: 76, number: 76, region: 'GRIJS', symbols: [], bottomSymbols: ['VLAM', 'VLAM', 'VOGEL', 'VOGEL', 'BANAAN', 'BANAAN'], isNight: true, hasTreasureMap: false, scoreType: '1COLOR', scoreValue: 4, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: false }); continue; }
+          }
+          
+          if (shuffle) { return shuffleArray(deck); }
+          return deck;
+        };
+
+        const FIXED_SANCTUARIES = [
+            { id: 'S-1', region: 'GRIJS', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-1' },
+            { id: 'S-2', region: 'GRIJS', symbols: ['VLAM', 'VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-2' },
+            { id: 'S-3', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: '3SYMBOLS', scoreValue: 3, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-3' },
+            { id: 'S-4', region: 'GROEN', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '3SYMBOLS', scoreValue: 3, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-4' },
+            { id: 'S-5', region: 'GEEL', symbols: [], bottomSymbols: [], leftSymbol: 'NIGHT', scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: true, displayId: 'S-5' },
+            { id: 'S-6', region: 'BLAUW', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 2, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: true, displayId: 'S-6' },
+            { id: 'S-7', region: 'BLAUW', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-7' },
+            { id: 'S-8', region: 'ROOD', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '3SYMBOLS', scoreValue: 3, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-8' },
+            { id: 'S-9', region: 'GRIJS', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: true, displayId: 'S-9' },
+            { id: 'S-10', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['ROOD', 'BLAUW'], isSanctuary: true, displayId: 'S-10' },
+            { id: 'S-11', region: 'GRIJS', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: true, displayId: 'S-11' },
+            { id: 'S-12', region: 'GRIJS', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: true, displayId: 'S-12' },
+            { id: 'S-13', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['BLAUW', 'GEEL'], isSanctuary: true, displayId: 'S-13' },
+            { id: 'S-14', region: 'GROEN', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-14' },
+            { id: 'S-15', region: 'GRIJS', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: 'NIGHT', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-15' },
+            { id: 'S-16', region: 'GRIJS', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: 'NIGHT', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-16' },
+            { id: 'S-17', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GROEN', 'ROOD'], isSanctuary: true, displayId: 'S-17' },
+            { id: 'S-18', region: 'GROEN', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'NIGHT', scoreColors: [], isSanctuary: true, displayId: 'S-18' },
+            { id: 'S-19', region: 'ROOD', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-19' },
+            { id: 'S-20', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GROEN', 'BLAUW'], isSanctuary: true, displayId: 'S-20' },
+            { id: 'S-21', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: true, displayId: 'S-21' },
+            { id: 'S-22', region: 'GROEN', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['GROEN'], isSanctuary: true, displayId: 'S-22' },
+            { id: 'S-23', region: 'GRIJS', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: true, displayId: 'S-23' },
+            { id: 'S-24', region: 'ROOD', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['ROOD'], isSanctuary: true, displayId: 'S-24' },
+            { id: 'S-25', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: true, displayId: 'S-25' },
+            { id: 'S-26', region: 'BLAUW', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-26' },
+            { id: 'S-27', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'BANAAN', scoreColors: [], isSanctuary: true, displayId: 'S-27' },
+            { id: 'S-28', region: 'BLAUW', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['BLAUW'], isSanctuary: true, displayId: 'S-28' },
+            { id: 'S-29', region: 'GEEL', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['GEEL'], isSanctuary: true, displayId: 'S-29' },
+            { id: 'S-30', region: 'GROEN', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-30' },
+            { id: 'S-31', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['GEEL', 'GROEN'], isSanctuary: true, displayId: 'S-31' },
+            { id: 'S-32', region: 'GROEN', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-32' },
+            { id: 'S-33', region: 'ROOD', symbols: [], bottomSymbols: [], leftSymbol: 'NIGHT', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-33', isNight: true },
+            { id: 'S-34', region: 'GEEL', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: true, displayId: 'S-34' },
+            { id: 'S-35', region: 'ROOD', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-35' },
+            { id: 'S-36', region: 'GEEL', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-36' },
+            { id: 'S-37', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VLAM', scoreColors: [], isSanctuary: true, displayId: 'S-37' },
+            { id: 'S-38', region: 'GRIJS', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: true, displayId: 'S-38' },
+            { id: 'S-39', region: 'GRIJS', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-39' },
+            { id: 'S-40', region: 'GEEL', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-40' },
+            { id: 'S-41', region: 'GEEL', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '4COLORS', scoreValue: 4, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-41' },
+            { id: 'S-42', region: 'GRIJS', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: true, displayId: 'S-42' },
+            { id: 'S-43', region: 'GRIJS', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: '1COLOR', scoreValue: 1, scoreSymbol: null, scoreColors: ['GRIJS'], isSanctuary: true, displayId: 'S-43' },
+            { id: 'S-44', region: 'BLAUW', symbols: ['BANAAN'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-44' },
+            { id: 'S-45', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: '2COLORS', scoreValue: 1, scoreSymbol: null, scoreColors: ['ROOD', 'GEEL'], isSanctuary: true, displayId: 'S-45' },
+            { id: 'S-46', region: 'ROOD', symbols: ['VOGEL'], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-46' },
+            { id: 'S-47', region: 'GRIJS', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 1, scoreSymbol: 'MAP', scoreColors: [], isSanctuary: true, displayId: 'S-47' },
+            { id: 'S-48', region: 'GRIJS', symbols: ['VLAM'], bottomSymbols: [], leftSymbol: 'NIGHT', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-48' },
+            { id: 'S-49', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'FIXED', scoreValue: 5, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-49' },
+            { id: 'S-50', region: 'BLAUW', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: 'FIXED', scoreValue: 0, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-50' },
+            { id: 'S-51', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: null, scoreType: 'SYMBOL', scoreValue: 2, scoreSymbol: 'VOGEL', scoreColors: [], isSanctuary: true, displayId: 'S-51' },
+            { id: 'S-52', region: 'GRIJS', symbols: [], bottomSymbols: [], leftSymbol: 'MAP', scoreType: '4COLORS', scoreValue: 4, scoreSymbol: null, scoreColors: [], isSanctuary: true, displayId: 'S-52' }
+        ];
+
+        const generateSanctuaries = (shuffle = true) => {
+          const sanctuaries = [...FIXED_SANCTUARIES];
+          if (shuffle) { return shuffleArray(sanctuaries); }
+          return sanctuaries;
+        };
+
+        // --- COMPONENTEN ---
+
+        const BackOfCard = () => (
+          <div className="w-28 h-40 sm:w-36 sm:h-56 bg-slate-800 border-4 border-slate-600 rounded-xl shadow-lg flex flex-col items-center justify-center text-slate-500">
+            <MapIcon size={48} className="opacity-20 mb-2" />
+            <span className="font-bold uppercase tracking-widest text-xs">Faraway</span>
+          </div>
+        );
+
+        const Card = ({ data, onClick, disabled, isMini = false, isSelected = false, isScoring = false }) => {
+          if (!data) return <div className="border-2 border-dashed border-gray-300 rounded-lg w-28 h-40 sm:w-36 sm:h-56 flex items-center justify-center bg-gray-50 opacity-50"></div>;
+
+          const style = REGIONS[data.region] || REGIONS['GRIJS'];
+          const gradientClass = style.gradient || '';
+          const bgImageStyle = style.imageUrl ? { backgroundImage: `url(${style.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {};
+
+          const renderScoreContent = () => {
+              const iconSize = isMini ? 10 : 16;
+              if (data.scoreValue === 0) return null;
+
+              if (data.scoreType === 'FIXED') {
+                  return <span className="text-xl font-black">{data.scoreValue}</span>;
+              } else if (data.scoreType === 'SYMBOL' && data.scoreSymbol) {
+                  const symData = SYMBOLS[data.scoreSymbol];
+                  return <><div className={symData ? symData.color : 'text-gray-500'}>{symData.icon({size: iconSize})}</div><span>= {data.scoreValue}</span></>;
+              } else if (data.scoreType === '3SYMBOLS') {
+                   return (
+                      <div className="flex items-center gap-1">
+                          <div className="flex flex-col items-center">
+                              <div className="flex gap-0.5"><Bird size={iconSize} className="text-amber-800" /><Banana size={iconSize} className="text-yellow-600" /></div>
+                              <Flame size={iconSize} className="text-red-600" />
+                          </div>
+                          <span>= {data.scoreValue}</span>
+                      </div>
+                   );
+              } else if (data.scoreType === '4COLORS') {
+                  return (
+                      <div className="flex items-center gap-1">
+                          <div className="flex -space-x-1"><Square size={iconSize} className="text-red-500 fill-current" /><Square size={iconSize} className="text-emerald-500 fill-current" /><Square size={iconSize} className="text-blue-500 fill-current" /><Square size={iconSize} className="text-yellow-500 fill-current" /></div>
+                          <span>= {data.scoreValue}</span>
+                      </div>
+                  );
+              } else if (data.scoreType === '1COLOR' || data.scoreType === '2COLORS') {
+                  if (!data.scoreColors) return null;
+                  return (
+                      <div className="flex items-center gap-1">
+                          <div className="flex items-center">
+                              {data.scoreColors.map((colorKey, idx) => {
+                                  const colorStyle = REGIONS[colorKey] || REGIONS['GRIJS'];
+                                  return (
+                                    <React.Fragment key={`color-${colorKey}-${idx}`}>{idx > 0 && <span className="mx-0.5 text-gray-400 font-bold text-xs">/</span>}<Square size={iconSize} className={`${colorStyle.iconColor} fill-current`} /></React.Fragment>
+                                  );
+                              })}
+                          </div>
+                          <span>= {data.scoreValue}</span>
+                      </div>
+                  );
+              }
+              return null;
+          };
+
+          const renderRightSymbols = () => {
+            if (!data.symbols || data.symbols.length === 0) return null;
+            return data.symbols.map((symKey, idx) => {
+              const symData = SYMBOLS[symKey];
+              if (!symData) return null; 
+              return (
+                <div key={`sym-right-${symKey}-${idx}`} className={`bg-white/90 p-0.5 rounded-full shadow-sm ${isMini ? 'mb-0.5' : 'mb-1 last:mb-0'}`} title={symData.name}>
+                     <div className={symData.color}>{symData.icon({size: isMini ? 12 : 18})}</div>
+                </div>
+              );
+            });
+          };
+
+          const renderBottomSymbols = () => {
+            if (!data.bottomSymbols || data.bottomSymbols.length === 0) return null;
+            const sortedSymbols = [...data.bottomSymbols].sort();
+            return (
+              <div className={`flex flex-nowrap justify-end items-center ${isMini ? 'gap-0' : 'gap-0.5'} px-1 mb-1 max-w-full z-10 overflow-hidden`}>
+                {sortedSymbols.map((symKey, idx) => {
+                  const symData = SYMBOLS[symKey];
+                  if (!symData) return null; 
+                  return <div key={`sym-bottom-${symKey}-${idx}`} className="bg-white/80 p-0.5 rounded shadow-sm border border-white/50 flex-shrink-0"><div className={symData.color}>{symData.icon({size: isMini ? 5 : 12})}</div></div>;
+                })}
+              </div>
+            );
+          };
+
+          if (isMini) {
+            return (
+               <div onClick={() => !disabled && onClick && onClick(data)} className={`relative ${!style.imageUrl ? gradientClass : ''} ${style.border} border-2 rounded-lg shadow-sm w-20 h-32 flex flex-col justify-between p-1 overflow-hidden transition-all ${!disabled && onClick ? 'cursor-pointer hover:scale-105 hover:shadow-md hover:ring-2 ring-indigo-400' : ''}`} style={bgImageStyle}>
+                 {style.imageUrl && <div className="absolute inset-0 bg-white/40 pointer-events-none" />}
+                 <div className="flex justify-between items-start h-8 w-full z-10">
+                    <div className="flex items-start">
+                        {(data.leftSymbol || data.hasTreasureMap || data.isNight !== undefined) && (
+                             <div className="bg-white/90 p-0.5 rounded-full shadow-sm">
+                                {data.isNight ? <Moon size={12} className="text-indigo-600 fill-indigo-100" /> : (data.leftSymbol === 'MAP' || data.hasTreasureMap) ? <MapIcon size={12} className="text-emerald-600" /> : (data.leftSymbol === 'NIGHT') ? <Moon size={12} className="text-indigo-600 fill-indigo-100" /> : <Sun size={12} className="text-amber-500 fill-amber-100" />}
+                             </div>
+                        )}
+                    </div>
+                    <div className="flex flex-col items-end">{renderRightSymbols()}</div>
+                 </div>
+                 <div className="flex flex-col justify-end z-10 mt-auto w-full gap-0.5">
+                   {renderBottomSymbols()}
+                   <div className="bg-white/90 rounded border border-gray-200 text-center shadow-sm h-14 flex items-center justify-center overflow-hidden w-[94%] mx-auto"><div className="flex items-center justify-center gap-1 text-gray-900 font-bold text-xs px-1">{renderScoreContent()}</div></div>
+                 </div>
+               </div>
+            );
+          }
+
+          // Aangepaste opacity logica voor kaarten tijdens scoring
+          const opacityClass = disabled && !isScoring ? 'opacity-50 grayscale-[0.5]' : '';
+          const cursorClass = disabled ? 'cursor-not-allowed' : 'cursor-pointer';
+
+          return (
+            <div onClick={() => !disabled && onClick && onClick(data)} className={`relative ${!style.imageUrl ? gradientClass : ''} ${style.border} border-4 rounded-xl shadow-lg w-28 h-40 sm:w-36 sm:h-56 flex flex-col justify-between transition-all transform duration-200 ${opacityClass} ${cursorClass} ${!disabled ? 'hover:-translate-y-2 hover:shadow-xl' : ''} ${isSelected ? 'ring-4 ring-indigo-500 scale-105' : ''}`} style={bgImageStyle}>
+              {style.imageUrl && <div className="absolute inset-0 bg-white/40 pointer-events-none rounded-xl" />}
+              <div className="flex justify-between items-start p-2 z-10">
+                <div className="flex items-start">
+                    {data.number !== undefined ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                            <div className={`text-lg font-bold ${style.text} bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-sm`}>{data.number}</div>
+                            <div className="bg-white/90 p-1 rounded-full shadow-sm">
+                                {data.isNight ? (
+                                    <Moon size={16} className="text-indigo-600 fill-indigo-100" title="Nacht" />
+                                ) : (
+                                    <Sun size={16} className="text-amber-500 fill-amber-100" title="Dag" />
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-start gap-1.5">
+                            {(data.leftSymbol || data.hasTreasureMap) && (
+                                <div className="bg-white/90 p-1 rounded-full shadow-sm">
+                                     {data.leftSymbol === 'NIGHT' ? (
+                                        <Moon size={16} className="text-indigo-600 fill-indigo-100" title="Nacht" />
+                                     ) : (
+                                        <MapIcon size={16} className="text-emerald-600" title="Kaart" />
+                                     )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {data.hasTreasureMap && data.number !== undefined && <div className="bg-white/90 p-1 rounded-full shadow-sm ml-1 mt-1" title="Schatkaart"><MapIcon size={16} className="text-emerald-600" /></div>}
+                </div>
+                <div className="flex flex-col items-end">{renderRightSymbols()}</div>
+              </div>
+              <div className="z-10 relative mt-auto flex flex-col items-end w-full px-2">
+                {renderBottomSymbols()}
+                <div className="bg-white/90 p-1.5 mb-1.5 rounded-lg border border-gray-200 text-center shadow-sm min-h-[32px] flex flex-col justify-center w-[94%] mx-auto">
+                  <div className="flex items-center justify-center gap-1.5 text-gray-900 font-bold">
+                     {renderScoreContent()}
+                  </div>
+                </div>
+              </div>
+              <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap`}>{style.name}</div>
+            </div>
+          );
+        };
+
+        // --- SCORING HELPERS ---
+
+        const getVisibleResources = (cards) => {
+            const counts = {
+                ROOD: 0, BLAUW: 0, GEEL: 0, GROEN: 0, GRIJS: 0,
+                BANAAN: 0, VLAM: 0, VOGEL: 0,
+                NIGHT: 0, MAP: 0
+            };
+
+            cards.forEach(c => {
+                // Kleuren tellen
+                if(c.region && counts[c.region] !== undefined) counts[c.region]++;
+                
+                // Symbolen rechtsboven tellen
+                if(c.symbols) {
+                    c.symbols.forEach(s => { 
+                        if(counts[s] !== undefined) counts[s]++;
+                        // Veiligheidshalve ook hier checken, hoewel ze meestal BANAAN/VLAM/VOGEL zijn
+                        if(s === 'NIGHT') counts.NIGHT++;
+                        if(s === 'MAP') counts.MAP++; 
+                    });
+                }
+                
+                // Speciale Symbolen (Nacht/Kaart) op de rest van de kaart
+                if (c.number !== undefined) {
+                    // Standaard kaart: Kan zowel Nacht als Schatkaart zijn
+                    if (c.isNight) counts.NIGHT++;
+                    if (c.hasTreasureMap) counts.MAP++;
+                } else {
+                    // Heiligdom kaart: Kijk naar het symbool linksboven
+                    if (c.leftSymbol === 'NIGHT') counts.NIGHT++;
+                    if (c.leftSymbol === 'MAP') counts.MAP++;
+                    
+                    // Fallback als leftSymbol niet is gezet maar wel hasTreasureMap (consistentie met render logic)
+                    if (!c.leftSymbol && c.hasTreasureMap) counts.MAP++;
+                }
+            });
+            return counts;
+        };
+
+        const calculateCardScore = (targetCard, visibleCards) => {
+            if (!targetCard) return { score: 0, met: false, reason: "Geen kaart" };
+
+            const resources = getVisibleResources(visibleCards);
+            let met = true;
+            let missingReasons = [];
+
+            // 1. Check Prerequisites
+            if (targetCard.bottomSymbols && targetCard.bottomSymbols.length > 0) {
+                const reqs = {};
+                targetCard.bottomSymbols.forEach(s => reqs[s] = (reqs[s] || 0) + 1);
+                for (const [sym, qty] of Object.entries(reqs)) {
+                    const available = resources[sym] || 0;
+                    if (available < qty) {
+                        met = false;
+                        const symName = SYMBOLS[sym] ? SYMBOLS[sym].name : sym;
+                        missingReasons.push(`${qty - available}x ${symName}`);
+                    }
+                }
+            }
+
+            if (!met) {
+                return { 
+                    score: 0, 
+                    met: false, 
+                    reason: `Mist: ${missingReasons.join(', ')}` 
+                };
+            }
+
+            // 2. Calculate Score
+            let score = 0;
+            let reason = "";
+            const { scoreType, scoreValue, scoreSymbol, scoreColors } = targetCard;
+
+            if (scoreType === 'FIXED') {
+                score = scoreValue;
+                reason = "Vaste punten";
+            } else if (scoreType === 'SYMBOL') {
+                const count = resources[scoreSymbol] || 0;
+                score = scoreValue * count;
+                const symName = SYMBOLS[scoreSymbol] ? SYMBOLS[scoreSymbol].name : scoreSymbol;
+                reason = `${count}x ${symName}`;
+            } else if (scoreType === '1COLOR') {
+                const color = scoreColors[0];
+                const count = resources[color] || 0;
+                score = scoreValue * count;
+                const colorName = REGIONS[color] ? REGIONS[color].name : color;
+                reason = `${count}x ${colorName}`;
+            } else if (scoreType === '2COLORS') {
+                const c1 = scoreColors[0];
+                const c2 = scoreColors[1];
+                const count = (resources[c1]||0) + (resources[c2]||0);
+                score = scoreValue * count;
+                const c1Name = REGIONS[c1]?.name || c1;
+                const c2Name = REGIONS[c2]?.name || c2;
+                reason = `${count}x ${c1Name}/${c2Name}`;
+            } else if (scoreType === '3SYMBOLS') {
+                const count = Math.min(resources.BANAAN || 0, resources.VLAM || 0, resources.VOGEL || 0);
+                score = scoreValue * count;
+                reason = `${count}x Sets (V/B/V)`;
+            } else if (scoreType === '4COLORS') {
+                const count = Math.min(resources.ROOD || 0, resources.GEEL || 0, resources.BLAUW || 0, resources.GROEN || 0);
+                score = scoreValue * count;
+                reason = `${count}x Sets (Kleuren)`;
+            }
+
+            return { score, met: true, reason };
+        };
+
+
+        const FarawayApp = () => {
+          const [deck, setDeck] = useState([]);
+          const [hand, setHand] = useState([]);
+          const [tableau, setTableau] = useState([]); 
+          const [marketCards, setMarketCards] = useState([]); 
+          const [sanctuaryPile, setSanctuaryPile] = useState([]);
+          const [mySanctuaries, setMySanctuaries] = useState([]);
+          const [sanctuaryChoices, setSanctuaryChoices] = useState([]);
+          const [gameState, setGameState] = useState('loading'); 
+          const [turnPhase, setTurnPhase] = useState('play_hand'); 
+          const [message, setMessage] = useState("Welkom bij Faraway!");
+          
+          const [revealedIndices, setRevealedIndices] = useState([]);
+          const [tableauScores, setTableauScores] = useState(Array(8).fill(null));
+          const [sanctuaryScores, setSanctuaryScores] = useState([]); 
+          const [sanctuaryTotal, setSanctuaryTotal] = useState(0);
+
+          const allReferenceCards = useMemo(() => generateDeck(false), []);
+          const allReferenceSanctuaries = useMemo(() => generateSanctuaries(false), []);
+          const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+
+          const totalScore = useMemo(() => {
+            const tabTotal = tableauScores.reduce((acc, val) => acc + (val ? val.score : 0), 0);
+            return tabTotal + sanctuaryTotal;
+          }, [tableauScores, sanctuaryTotal]);
+          
+          const startNewGame = () => {
+            const newDeck = generateDeck(true); 
+            const startHand = newDeck.splice(0, 3);
+            setDeck(newDeck);
+            setHand(startHand);
+            setTableau([]);
+            setMarketCards([]);
+            setSanctuaryChoices([]);
+            setSanctuaryPile(generateSanctuaries(true));
+            setMySanctuaries([]);
+            setRevealedIndices([]);
+            setTableauScores(Array(8).fill(null));
+            setSanctuaryScores([]);
+            setSanctuaryTotal(0);
+            setGameState('playing');
+            setTurnPhase('play_hand');
+            setMessage("Ronde 1: Kies een kaart uit je hand om te spelen.");
+          };
+
+          useEffect(() => { startNewGame(); }, []);
+
+          const triggerSanctuaryPhase = (currentTableau) => {
+            const mapCount = currentTableau.filter(c => c.hasTreasureMap).length + mySanctuaries.filter(s => s.leftSymbol === 'MAP').length;
+            const cardsToDraw = 1 + mapCount;
+            const choices = sanctuaryPile.slice(0, cardsToDraw);
+            setSanctuaryChoices(choices);
+            setTurnPhase('pick_sanctuary');
+            setMessage(`Heiligdom verdiend! Je hebt ${mapCount} schatkaart(en), dus kies 1 uit ${choices.length} opties.`);
+          };
+
+          const startMarketPhase = (prefixMessage = "") => {
+            if (deck.length >= 2) {
+              const newMarket = [deck[0], deck[1]];
+              setDeck(prev => prev.slice(2));
+              setMarketCards(newMarket);
+              setTurnPhase('pick_market');
+              setMessage(prefixMessage + "Kies nu 1 nieuwe kaart uit de markt.");
+            } else { finishGame(); }
+          };
+
+          const playHandCard = (card) => {
+            if (gameState !== 'playing' || turnPhase !== 'play_hand') return;
+            const newTableau = [...tableau, card];
+            const newHand = hand.filter(c => c.id !== card.id);
+            setTableau(newTableau);
+            setHand(newHand);
+            let earnedSanctuary = tableau.length > 0 && card.number > tableau[tableau.length - 1].number;
+            if (earnedSanctuary) { triggerSanctuaryPhase(newTableau); }
+            else if (newTableau.length === 8) { finishGame(newTableau); }
+            else { startMarketPhase(`Je speelde ${card.number}. `); }
+          };
+
+          const pickSanctuaryCard = (sanctuaryCard) => {
+            if (gameState !== 'playing' || turnPhase !== 'pick_sanctuary') return;
+            const newSanctuaries = [...mySanctuaries, sanctuaryCard];
+            setMySanctuaries(newSanctuaries);
+            setSanctuaryPile(prev => prev.slice(sanctuaryChoices.length));
+            setSanctuaryChoices([]);
+            if (tableau.length === 8) { finishGame(tableau, newSanctuaries); }
+            else { startMarketPhase("Heiligdom gekozen. "); }
+          };
+
+          const pickMarketCard = (card) => {
+            if (gameState !== 'playing' || turnPhase !== 'pick_market') return;
+            setHand(prev => [...prev, card]);
+            setMarketCards([]);
+            setTurnPhase('play_hand');
+            setMessage(`Ronde ${tableau.length + 1}: Kies een kaart om te spelen.`);
+          };
+
+          const finishGame = (finalTableau = tableau, finalSanctuaries = mySanctuaries) => { 
+            setGameState('scoring'); 
+            setMessage("Reis voltooid! Kaarten worden berekend.");
+            
+            const index = 7;
+            const visibleCards = [...finalTableau.slice(index), ...finalSanctuaries];
+            const result = calculateCardScore(finalTableau[index], visibleCards);
+            
+            const newScores = Array(8).fill(null);
+            newScores[index] = result;
+            
+            setTableauScores(newScores);
+            setRevealedIndices([index]);
+            
+            setMessage("Score voor kaart 8 berekend. Klik op kaart 7 om verder te gaan.");
+          };
+
+          const handleRevealCard = (index) => {
+            if (gameState !== 'scoring' || revealedIndices.includes(index)) return;
+            if (index < 7 && !revealedIndices.includes(index + 1)) {
+                 setMessage(`Draai eerst kaart ${index + 2} om!`);
+                 return;
+            }
+
+            const visibleCards = [...tableau.slice(index), ...mySanctuaries];
+            const result = calculateCardScore(tableau[index], visibleCards);
+
+            const newScores = [...tableauScores];
+            newScores[index] = result;
+            setTableauScores(newScores);
+            setRevealedIndices(prev => [...prev, index]);
+
+            if (index === 0) {
+                const allVisible = [...tableau, ...mySanctuaries];
+                let sTotal = 0;
+                const sScores = mySanctuaries.map(s => {
+                    const sResult = calculateCardScore(s, allVisible);
+                    sTotal += sResult.score;
+                    return sResult;
+                });
+                setSanctuaryScores(sScores);
+                setSanctuaryTotal(sTotal);
+                setMessage("Alle scores berekend, inclusief heiligdommen!");
+            } else {
+                setMessage(`Kaart ${index + 1} berekend. Ga verder naar kaart ${index}.`);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-24 md:pb-0">
+              <header className="max-w-7xl mx-auto flex justify-between items-center bg-white p-4 shadow-sm sticky top-0 z-30">
+                <div className="flex items-center gap-2"><div className="bg-indigo-600 p-2 rounded-lg text-white"><MapIcon size={24} /></div><div><h1 className="text-xl font-bold leading-none">Faraway</h1><p className="text-xs text-slate-500">Solo Editie</p></div></div>
+                <div className="text-center"><div className="text-xs font-bold text-slate-400 uppercase">Ronde</div><div className="text-xl font-black">{gameState === 'scoring' ? 'Finish' : tableau.length + (turnPhase === 'pick_market' ? 0 : 1)} / 8</div></div>
+                <button onClick={startNewGame} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors" title="Nieuw Spel"><RefreshCw size={20} className="text-slate-600" /></button>
+              </header>
+
+              <main className="max-w-7xl mx-auto flex flex-col gap-4 p-4 mb-48 lg:mb-0">
+                <div className={`border px-4 py-3 rounded-lg flex items-center justify-between shadow-sm mx-auto w-full max-w-2xl transition-colors ${gameState === 'scoring' ? 'bg-indigo-600 text-white' : turnPhase === 'pick_market' ? 'bg-amber-50 border-amber-200 text-amber-900' : turnPhase === 'pick_sanctuary' ? 'bg-purple-50 border-purple-200 text-purple-900' : 'bg-indigo-50 border-indigo-100 text-indigo-800'}`}>
+                  <div className="flex items-center gap-3">
+                      {gameState === 'scoring' ? <Calculator size={20} /> : turnPhase === 'pick_market' ? <Store size={20} /> : turnPhase === 'pick_sanctuary' ? <Gem size={20} /> : <Hand size={20} />}
+                      <p className="font-bold text-sm">{message}</p>
+                  </div>
+                  {gameState === 'scoring' && (
+                      <button key="new-game-btn" onClick={startNewGame} className="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-indigo-50 transition-colors">Nieuw Spel</button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  <div className="lg:col-span-8 bg-white p-4 rounded-2xl shadow-sm min-h-[300px]">
+                     <div className="flex justify-between items-center mb-6 overflow-x-auto pb-2">
+                       <h2 className="text-lg font-bold text-slate-700 whitespace-nowrap mr-4">Jouw verkenning</h2>
+                       <div className="flex gap-2 flex-nowrap">
+                         {mySanctuaries.map((s, sIdx) => {
+                             const scoreData = sanctuaryScores[sIdx];
+                             return (
+                                 <div key={`my-sanc-${s.id}-${sIdx}`} className="relative flex-shrink-0 flex flex-col items-center gap-1">
+                                    <Card data={s} isMini={true} disabled={gameState === 'scoring'} isScoring={gameState === 'scoring'} />
+                                    {scoreData && (
+                                        <div className={`text-xs font-bold px-2 py-0.5 rounded-full animate-in zoom-in ${scoreData.met ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-700 line-through'}`}>
+                                            {scoreData.score}
+                                        </div>
+                                    )}
+                                 </div>
+                             );
+                         })}
+                         {mySanctuaries.length === 0 && <span key="no-sanctuaries" className="text-xs text-slate-400 italic whitespace-nowrap">Geen heiligdommen</span>}
+                       </div>
+                     </div>
+                     
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 gap-y-6 pb-4 items-start justify-items-center">
+                       {[...Array(8)].map((_, i) => {
+                         const card = tableau[i];
+                         const isRevealed = revealedIndices.includes(i) || gameState === 'playing';
+                         const canBeRevealed = gameState === 'scoring' && !isRevealed && (i === 7 || (i < 7 && revealedIndices.includes(i+1)));
+                         const scoreData = tableauScores[i];
+                         
+                         return (
+                           <div key={`tableau-slot-${i}`} className="flex flex-col items-center gap-2 w-full">
+                             <div 
+                               className={`relative transition-all duration-300 ${canBeRevealed ? 'cursor-pointer hover:scale-105 ring-4 ring-indigo-400 ring-offset-2 rounded-xl animate-pulse' : ''} ${isRevealed ? 'animate-flip-in' : ''}`}
+                               onClick={() => handleRevealCard(i)}
+                             >
+                               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full z-20 border-2 border-white">{i + 1}</div>
+                               {isRevealed && card ? (
+                                  <Card data={card} disabled={true} isScoring={gameState === 'scoring'} />
+                               ) : (
+                                  <BackOfCard />
+                               )}
+                               
+                               {isRevealed && scoreData && !scoreData.met && (
+                                  <div className="absolute inset-0 bg-red-500/10 rounded-xl pointer-events-none flex items-center justify-center">
+                                      <XCircle size={48} className="text-red-600 opacity-50" />
+                                  </div>
+                               )}
+                             </div>
+                             
+                             {gameState === 'scoring' && isRevealed && scoreData && (
+                               <div className={`w-full max-w-[140px] flex flex-col items-center animate-in fade-in zoom-in duration-300`}>
+                                  <div className={`relative w-full py-1 px-2 text-center font-black rounded-lg border-2 mb-1 ${scoreData.met ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-red-50 border-red-200 text-red-800 decoration-red-800'}`}>
+                                    <span className={!scoreData.met ? 'line-through opacity-60' : ''}>{scoreData.score}</span>
+                                    {scoreData.met && <div className="absolute -right-2 -top-2 bg-emerald-500 text-white p-0.5 rounded-full shadow-sm"><CheckCircle size={12} /></div>}
+                                  </div>
+                                  <div className="text-[10px] text-center leading-tight font-medium text-slate-500 bg-white/80 px-1 py-0.5 rounded border border-slate-200 w-full">
+                                    {scoreData.reason}
+                                  </div>
+                               </div>
+                             )}
+                           </div>
+                         );
+                       })}
+                     </div>
+                  </div>
+
+                  <div className={`lg:col-span-4 flex flex-col gap-4 lg:sticky lg:top-4 transition-all duration-300 ${gameState !== 'scoring' ? 'fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 lg:relative lg:bg-transparent lg:shadow-none lg:p-0' : ''}`}>
+                     {gameState === 'scoring' ? (
+                        <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-xl animate-in fade-in slide-in-from-right duration-500">
+                           <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3">
+                              <Calculator size={24} className="text-indigo-400" />
+                              <h2 className="text-xl font-bold uppercase tracking-wider">Scoreoverzicht</h2>
+                           </div>
+                           
+                           <div className="space-y-3 mb-6">
+                              {[...Array(8)].map((_, idx) => {
+                                 const i = 7 - idx;
+                                 const scoreData = tableauScores[i];
+                                 const revealed = revealedIndices.includes(i);
+                                 return (
+                                    <div key={`score-row-${i}`} className={`flex justify-between items-center p-2 rounded ${revealed ? 'bg-slate-700/50' : 'opacity-30'}`}>
+                                       <span className="text-sm font-semibold text-slate-300">Kaart {i + 1}</span>
+                                       {revealed && scoreData ? (
+                                           <div className="flex items-center gap-2">
+                                              {!scoreData.met && <span className="text-xs text-red-400 uppercase font-bold mr-1">Eis!</span>}
+                                              <span className={`font-mono text-lg font-bold ${!scoreData.met ? 'text-red-400 line-through' : 'text-white'}`}>{scoreData.score}</span>
+                                           </div>
+                                       ) : <span className="font-mono text-lg font-bold">-</span>}
+                                    </div>
+                                 );
+                              })}
+                              
+                              <div className="pt-4 border-t border-slate-700">
+                                <div className="flex justify-between items-center mb-2">
+                                   <span className="text-sm font-bold text-indigo-300">Heiligdommen</span>
+                                   <span className={`font-mono text-lg font-bold ${revealedIndices.length === 8 ? 'text-white' : 'text-slate-500'}`}>{revealedIndices.length === 8 ? sanctuaryTotal : '?'}</span>
+                                </div>
+                              </div>
+                           </div>
+                           
+                           <div className="bg-indigo-600 p-4 rounded-xl shadow-inner flex justify-between items-center">
+                              <span className="text-lg font-black uppercase">Totaal</span>
+                              <span className="text-3xl font-black font-mono">{totalScore}</span>
+                           </div>
+                        </div>
+                     ) : (
+                        <div className="space-y-4 w-full max-w-md mx-auto lg:max-w-none">
+                           {turnPhase === 'pick_sanctuary' && gameState === 'playing' && (
+                              <div className="bg-purple-100 p-4 rounded-2xl shadow-lg border-2 border-purple-300 animate-in slide-in-from-bottom duration-300">
+                                 <h2 className="text-sm font-bold mb-2 flex items-center gap-2 text-purple-900"><Gem size={16} /> Kies 1 Heiligdom</h2>
+                                 <div className="flex flex-wrap justify-center gap-2 pb-2">
+                                   {sanctuaryChoices.map((card, cIdx) => (
+                                     <div key={`choice-sanc-${card.id}-${cIdx}`} className="transform hover:scale-105 transition-transform flex-shrink-0">
+                                        <Card data={card} onClick={pickSanctuaryCard} isMini={true} />
+                                     </div>
+                                   ))}
+                                 </div>
+                              </div>
+                           )}
+                           {turnPhase === 'pick_market' && gameState === 'playing' && (
+                              <div className="bg-amber-100 p-4 rounded-2xl shadow-lg border-2 border-amber-300 animate-in slide-in-from-bottom duration-300">
+                                 <h2 className="text-sm font-bold mb-2 flex items-center gap-2 text-amber-900"><Store size={16} /> Kies 1 Kaart</h2>
+                                 <div className="flex justify-center gap-4">
+                                   {marketCards.map((card, mIdx) => card ? (
+                                      <div key={`choice-market-${card.id}-${mIdx}`} className="transform hover:scale-105 transition-transform flex-shrink-0">
+                                        <div className="scale-90 origin-bottom">
+                                           <Card data={card} onClick={pickMarketCard} />
+                                        </div>
+                                      </div>
+                                   ) : null)}
+                                 </div>
+                              </div>
+                           )}
+                           <div className={`transition-all duration-300 ${turnPhase === 'play_hand' && gameState === 'playing' ? '' : 'opacity-50 pointer-events-none hidden lg:block'}`}>
+                              <h2 className="text-sm font-bold mb-2 flex items-center gap-2 text-slate-500 lg:hidden"><Hand size={16} /> Je Hand</h2>
+                              <div className="flex flex-nowrap lg:flex-wrap justify-center gap-2 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
+                                {hand.map((card, hIdx) => (
+                                  <div key={`hand-card-${card.id}-${hIdx}`} className={`${turnPhase === 'play_hand' ? 'hover:-translate-y-4' : ''} transition-transform flex-shrink-0`}>
+                                     <div className="scale-90 lg:scale-100 origin-bottom">
+                                        <Card data={card} onClick={playHandCard} disabled={turnPhase !== 'play_hand' || gameState !== 'playing'} isMini={hand.length > 5} />
+                                     </div>
+                                  </div>
+                                ))}
+                                {hand.length === 0 && <div className="text-slate-400 italic">Leeg</div>}
+                              </div>
+                           </div>
+                        </div>
+                     )}
+                  </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto mt-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <div className="flex justify-between items-center mb-6 cursor-pointer" onClick={() => setIsGalleryVisible(!isGalleryVisible)}><h2 className="text-xl font-bold text-slate-700 flex items-center gap-2"><Info size={24} className="text-slate-400" /> Referentie Galerij</h2><div className="text-slate-400 text-sm font-semibold">{isGalleryVisible ? "Verbergen" : "Tonen"}</div></div>
+                  {isGalleryVisible && (<div className="space-y-8">
+                          <div><h3 className="font-bold text-slate-500 mb-4 text-sm uppercase tracking-wide border-b pb-2">Alle Kaarten (0-76)</h3><div className="flex flex-wrap gap-3 justify-center">{allReferenceCards.map((card, rIdx) => (
+                            <div key={`ref-card-${card.id}-${rIdx}`} className="relative group">
+                              <div className="transform transition-transform group-hover:scale-150 group-hover:z-50 origin-center duration-200">
+                                <Card data={card} isMini={true} disabled={true} />
+                              </div>
+                              <div className="text-center text-[10px] text-slate-400 mt-1 font-mono">#{card.number}</div>
+                            </div>
+                          ))}</div></div>
+                          <div><h3 className="font-bold text-purple-600 mb-4 text-sm uppercase tracking-wide border-b pb-2">Alle Heiligdommen (52)</h3><div className="flex flex-wrap gap-3 justify-center">{allReferenceSanctuaries.map((card, idx) => (
+                            <div key={`ref-sanc-${card.id || idx}`} className="relative group">
+                              <div className="transform transition-transform group-hover:scale-150 group-hover:z-50 origin-center duration-200">
+                                <Card data={card} isMini={true} disabled={true} />
+                              </div>
+                              <div className="text-center text-[10px] text-purple-400 mt-1 font-mono font-bold">{card.displayId || `S-${idx + 1}`}</div>
+                            </div>
+                          ))}</div></div>
+                      </div>)}
+                </div>
+              </main>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FarawayApp />);
+    </script>
+</body>
+</html>
